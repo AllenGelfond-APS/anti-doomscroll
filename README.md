@@ -15,3 +15,9 @@ Android app to reduce doomscrolling via time-based blocking and friction-driven 
 
 ## Status
 Personal project, actively iterating
+
+## Core Files
+
+- [Blocking Logic](app/src/main/java/com/gelfond/focusblocker/BlockRules.kt)
+- [Accessibility Service](app/src/main/java/com/gelfond/focusblocker/FocusAccessibilityService.kt)
+- [Usage Tracking](app/src/main/java/com/gelfond/focusblocker/LocalUsageTracker.kt)
