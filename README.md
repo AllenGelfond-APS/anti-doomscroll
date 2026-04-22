@@ -1,6 +1,6 @@
 # Anti Doomscroll
 
-Android app to reduce doomscrolling via time-based blocking and friction-driven overrides.
+Android app to reduce doomscrolling via time-based blocking and friction-driven overrides. Very Lightweight, doesn't affect battery signficantly.
 
 ## Features
 - Blocks Instagram, YouTube, Reddit
