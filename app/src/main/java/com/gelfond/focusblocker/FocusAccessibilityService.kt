@@ -2,6 +2,8 @@ package com.gelfond.focusblocker
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 
@@ -9,7 +11,12 @@ class FocusAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "FocusBlocker"
+        private const val BLOCK_LAUNCH_DELAY_MS = 150L
+        private const val BLOCK_DEBOUNCE_MS = 750L
     }
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var lastBlockLaunchMs = 0L
 
     private val blockedApps = setOf(
         "com.instagram.android",
@@ -86,11 +93,34 @@ class FocusAccessibilityService : AccessibilityService() {
         )
 
         if (decision.shouldBlock) {
-            launchBlockerActivity(
+            launchBlockFlow(
                 blockedPackage = packageName,
-                decision = decision
+                decision = decision,
+                now = now
             )
         }
+    }
+
+    private fun launchBlockFlow(
+        blockedPackage: String,
+        decision: BlockDecision,
+        now: Long
+    ) {
+        if (now - lastBlockLaunchMs < BLOCK_DEBOUNCE_MS) {
+            Log.d(TAG, "Skipping duplicate block launch for $blockedPackage")
+            return
+        }
+
+        lastBlockLaunchMs = now
+
+        performGlobalAction(GLOBAL_ACTION_HOME)
+
+        mainHandler.postDelayed({
+            launchBlockerActivity(
+                blockedPackage = blockedPackage,
+                decision = decision
+            )
+        }, BLOCK_LAUNCH_DELAY_MS)
     }
 
     private fun launchBlockerActivity(
