@@ -46,9 +46,14 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val openDashboard = intent.getBooleanExtra("open_dashboard", false)
+
         setContent {
             FocusBlockerDarkTheme {
-                MainScreen()
+                MainScreen(
+                    initialShowDashboard = openDashboard
+                )
             }
         }
     }
@@ -65,7 +70,9 @@ fun FocusBlockerDarkTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    initialShowDashboard: Boolean = false
+) {
     val context = LocalContext.current
 
     var accessibilityEnabled by remember {
@@ -77,7 +84,7 @@ fun MainScreen() {
     }
 
     var showDashboard by remember {
-        mutableStateOf(false)
+        mutableStateOf(initialShowDashboard)
     }
 
     LaunchedEffect(Unit) {

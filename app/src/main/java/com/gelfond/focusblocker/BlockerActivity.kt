@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,7 +60,8 @@ class BlockerActivity : ComponentActivity() {
                         todaysLimitMinutes = todaysLimitMinutes,
                         blockMessage = blockMessage,
                         onUnlock = { handleUnlock(blockedPackage) },
-                        onExit = { goHomeAndFinish() }
+                        onExit = { goHomeAndFinish() },
+                        onDashboard = { openDashboard() }
                     )
                 }
             }
@@ -70,6 +72,15 @@ class BlockerActivity : ComponentActivity() {
         registerOverrideAndUpdateTomorrowLimit(this)
         grantTemporaryUnlock(this, blockedPackage)
         goHomeAndFinish()
+    }
+
+    private fun openDashboard() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            putExtra("open_dashboard", true)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun goHomeAndFinish() {
@@ -89,7 +100,8 @@ fun BlockerScreen(
     todaysLimitMinutes: Int,
     blockMessage: String,
     onUnlock: () -> Unit,
-    onExit: () -> Unit
+    onExit: () -> Unit,
+    onDashboard: () -> Unit
 ) {
     val context = LocalContext.current
     val overrideCount = getTodayOverrideCount(context)
@@ -176,68 +188,79 @@ fun BlockerScreen(
         return
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(24.dp)
     ) {
-        Text(
-            text = "BLOCKED",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = friendlyAppName(blockedPackage),
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = blockMessage,
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("Today: $accumulatedMinutes / $todaysLimitMinutes min")
-        Text("Overrides today: $overrideCount")
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = onExit,
-            modifier = Modifier.fillMaxWidth()
+        OutlinedButton(
+            onClick = onDashboard,
+            modifier = Modifier.align(Alignment.TopStart)
         ) {
-            Text("Exit")
+            Text("Dashboard")
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "BLOCKED",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold
+            )
 
-        if (isFirstOverrideToday) {
-            OutlinedButton(
-                onClick = onUnlock,
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = friendlyAppName(blockedPackage),
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = blockMessage,
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Today: $accumulatedMinutes / $todaysLimitMinutes min")
+            Text("Overrides today: $overrideCount")
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = onExit,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Free override")
+                Text("Exit")
             }
-        } else {
-            OutlinedButton(
-                onClick = {
-                    showOverrideEntry = true
-                    text = ""
-                    startTime = null
-                    timeRemaining = requiredWaitMs
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Override")
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (isFirstOverrideToday) {
+                OutlinedButton(
+                    onClick = onUnlock,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Free override")
+                }
+            } else {
+                OutlinedButton(
+                    onClick = {
+                        showOverrideEntry = true
+                        text = ""
+                        startTime = null
+                        timeRemaining = requiredWaitMs
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Override")
+                }
             }
         }
     }
