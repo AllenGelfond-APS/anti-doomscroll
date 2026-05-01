@@ -11,12 +11,13 @@ class FocusAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "FocusBlocker"
-        private const val BLOCK_LAUNCH_DELAY_MS = 150L
+        private const val BLOCK_LAUNCH_DELAY_MS = 400L
         private const val BLOCK_DEBOUNCE_MS = 750L
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var lastBlockLaunchMs = 0L
+    private var blockFlowInProgress = false
 
     private val blockedApps = setOf(
         "com.instagram.android",
@@ -40,17 +41,23 @@ class FocusAccessibilityService : AccessibilityService() {
         val unlockedPackage = getTemporarilyUnlockedPackage(this, now)
 
         when (packageName) {
+
             this.packageName -> {
                 if (unlockedPackage != null) {
                     markTemporaryUnlockLeft(this, unlockedPackage, now)
                 }
+
                 stopTrackedSession(this, now)
+
+                // critical: allow future blocks after we reach our own UI
+                blockFlowInProgress = false
             }
 
             in blockedApps -> {
                 if (unlockedPackage != null && unlockedPackage != packageName) {
                     markTemporaryUnlockLeft(this, unlockedPackage, now)
                 }
+
                 handleTrackedAppForeground(packageName, now)
             }
 
@@ -58,6 +65,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 if (unlockedPackage != null) {
                     markTemporaryUnlockLeft(this, unlockedPackage, now)
                 }
+
                 stopTrackedSession(this, now)
             }
         }
@@ -93,11 +101,7 @@ class FocusAccessibilityService : AccessibilityService() {
         )
 
         if (decision.shouldBlock) {
-            launchBlockFlow(
-                blockedPackage = packageName,
-                decision = decision,
-                now = now
-            )
+            launchBlockFlow(packageName, decision, now)
         }
     }
 
@@ -106,20 +110,25 @@ class FocusAccessibilityService : AccessibilityService() {
         decision: BlockDecision,
         now: Long
     ) {
+        if (blockFlowInProgress) {
+            Log.d(TAG, "Block flow already in progress; ignoring $blockedPackage")
+            return
+        }
+
         if (now - lastBlockLaunchMs < BLOCK_DEBOUNCE_MS) {
             Log.d(TAG, "Skipping duplicate block launch for $blockedPackage")
             return
         }
 
+        blockFlowInProgress = true
         lastBlockLaunchMs = now
 
+        // kick user out of the app
         performGlobalAction(GLOBAL_ACTION_HOME)
 
+        // delay prevents race condition where HOME closes your blocker
         mainHandler.postDelayed({
-            launchBlockerActivity(
-                blockedPackage = blockedPackage,
-                decision = decision
-            )
+            launchBlockerActivity(blockedPackage, decision)
         }, BLOCK_LAUNCH_DELAY_MS)
     }
 

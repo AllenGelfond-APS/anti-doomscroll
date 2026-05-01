@@ -1,7 +1,7 @@
 package com.gelfond.focusblocker
 
 object DebugConfig {
-    const val DEBUG_MODE = false
+    const val DEBUG_MODE = true
 
     const val FORCE_OVER_LIMIT = true
     const val FORCED_MINUTES = 61
