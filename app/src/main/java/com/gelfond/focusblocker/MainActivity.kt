@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FocusBlockerDarkTheme(content: @Composable () -> Unit) {
     val colors = darkColorScheme()
+
     MaterialTheme(
         colorScheme = colors,
         typography = MaterialTheme.typography,
@@ -79,10 +80,6 @@ fun MainScreen(
         mutableStateOf(isFocusAccessibilityServiceEnabled(context))
     }
 
-    var hasOpenedAccessibilitySettings by remember {
-        mutableStateOf(false)
-    }
-
     var showDashboard by remember {
         mutableStateOf(initialShowDashboard)
     }
@@ -91,15 +88,6 @@ fun MainScreen(
         while (true) {
             accessibilityEnabled = isFocusAccessibilityServiceEnabled(context)
             delay(1_000)
-        }
-    }
-
-    LaunchedEffect(accessibilityEnabled) {
-        if (!accessibilityEnabled && !hasOpenedAccessibilitySettings) {
-            hasOpenedAccessibilitySettings = true
-            context.startActivity(
-                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            )
         }
     }
 
@@ -135,7 +123,7 @@ fun AccessibilityRequiredScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Accessibility Required",
+                text = "Turn on Anti Doomscroll",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -143,22 +131,55 @@ fun AccessibilityRequiredScreen() {
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "FocusBlocker cannot block apps unless its Accessibility Service is turned on."
+                text = "Anti Doomscroll needs Accessibility permission to detect and block distracting apps."
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "If Android does not open the exact page, follow these steps:\n\n" +
+                        "1. Tap Installed apps\n" +
+                        "2. Tap Anti Doomscroll\n" +
+                        "3. Turn it on",
+                style = MaterialTheme.typography.bodyLarge
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
             Button(
                 onClick = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    )
+                    openFocusAccessibilitySettings(context)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Open Accessibility Settings")
+                Text("Open Accessibility Permission")
             }
         }
+    }
+}
+
+fun openFocusAccessibilitySettings(context: Context) {
+    val componentName = ComponentName(
+        context,
+        FocusAccessibilityService::class.java
+    ).flattenToString()
+
+    val directIntent = Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS").apply {
+        putExtra(
+            "android.provider.extra.ACCESSIBILITY_COMPONENT_NAME",
+            componentName
+        )
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+
+    val fallbackIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+
+    try {
+        context.startActivity(directIntent)
+    } catch (_: Exception) {
+        context.startActivity(fallbackIntent)
     }
 }
 
@@ -306,6 +327,7 @@ fun UsageDashboardScreen(
                 rows = buildList {
                     add("Currently blocking" to if (shouldBlockNow) "Yes" else "No")
                     add("Reason" to blockMessage)
+
                     if (unlockRemainingMs > 0L) {
                         add("Temporary unlock" to formatRemainingTime(unlockRemainingMs))
                     }
