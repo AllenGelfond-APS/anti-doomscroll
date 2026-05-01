@@ -229,10 +229,6 @@ fun UsageDashboardScreen(
     var todayOverrideCount by remember { mutableIntStateOf(0) }
     var tomorrowLimit by remember { mutableIntStateOf(60) }
     var unlockRemainingMs by remember { mutableLongStateOf(0L) }
-    var readCount by remember { mutableIntStateOf(0) }
-    var backToWorkCount by remember { mutableIntStateOf(0) }
-    var exerciseCount by remember { mutableIntStateOf(0) }
-    var stretchCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -242,11 +238,6 @@ fun UsageDashboardScreen(
             todayOverrideCount = getTodayOverrideCount(context)
             tomorrowLimit = getTomorrowLimitMinutes(context)
             unlockRemainingMs = getTemporaryUnlockRemainingMs(context)
-
-            readCount = getTodayRedirectActionCount(context, RedirectAction.READ)
-            backToWorkCount = getTodayRedirectActionCount(context, RedirectAction.BACK_TO_WORK)
-            exerciseCount = getTodayRedirectActionCount(context, RedirectAction.EXERCISE)
-            stretchCount = getTodayRedirectActionCount(context, RedirectAction.STRETCH)
 
             val decision = computeBlockDecision(
                 accumulatedMinutes = totalMinutes,
@@ -294,24 +285,33 @@ fun UsageDashboardScreen(
             CompactDashboardCard(
                 title = "Today",
                 rows = listOf(
-                    "Tracked total" to "$totalMinutes min",
+                    "Tracked use" to "$totalMinutes min",
                     "Limit" to "$todaysLimit min",
-                    "Overrides" to todayOverrideCount.toString(),
-                    "Tomorrow's limit" to "$tomorrowLimit min"
+                    "Remaining" to "${(todaysLimit - totalMinutes).coerceAtLeast(0)} min",
+                    "Overrides" to todayOverrideCount.toString()
                 )
             )
         }
 
         item {
             CompactDashboardCard(
-                title = "Status",
+                title = "Block status",
                 rows = buildList {
-                    add("Should block now" to if (shouldBlockNow) "Yes" else "No")
-                    add("Message" to blockMessage)
+                    add("Currently blocking" to if (shouldBlockNow) "Yes" else "No")
+                    add("Reason" to blockMessage)
                     if (unlockRemainingMs > 0L) {
                         add("Temporary unlock" to formatRemainingTime(unlockRemainingMs))
                     }
                 }
+            )
+        }
+
+        item {
+            CompactDashboardCard(
+                title = "Tomorrow",
+                rows = listOf(
+                    "Limit" to "$tomorrowLimit min"
+                )
             )
         }
 
@@ -325,20 +325,8 @@ fun UsageDashboardScreen(
         }
 
         item {
-            CompactDashboardCard(
-                title = "Redirect buttons today",
-                rows = listOf(
-                    "Read" to readCount.toString(),
-                    "Back to work" to backToWorkCount.toString(),
-                    "Exercise" to exerciseCount.toString(),
-                    "Stretch" to stretchCount.toString()
-                )
-            )
-        }
-
-        item {
             Text(
-                text = "Don't doomscrool dummy!",
+                text = "Don't doomscroll dummy!",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier.padding(top = 4.dp, start = 4.dp)

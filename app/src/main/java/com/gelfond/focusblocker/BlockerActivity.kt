@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -33,9 +33,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import java.time.LocalDateTime
 
 class BlockerActivity : ComponentActivity() {
 
@@ -46,12 +46,6 @@ class BlockerActivity : ComponentActivity() {
         val accumulatedMinutes = intent.getIntExtra("accumulated_minutes", 0)
         val todaysLimitMinutes = intent.getIntExtra("todays_limit_minutes", 60)
         val blockMessage = intent.getStringExtra("block_message") ?: "Blocked"
-
-        val decision = computeBlockDecision(
-            accumulatedMinutes = accumulatedMinutes,
-            todaysLimitMinutes = todaysLimitMinutes,
-            now = LocalDateTime.now()
-        )
 
         setContent {
             FocusBlockerDarkTheme {
@@ -64,22 +58,12 @@ class BlockerActivity : ComponentActivity() {
                         accumulatedMinutes = accumulatedMinutes,
                         todaysLimitMinutes = todaysLimitMinutes,
                         blockMessage = blockMessage,
-                        actions = decision.actions,
-                        onRead = { handleRedirectAction(RedirectAction.READ) },
-                        onBackToWork = { handleRedirectAction(RedirectAction.BACK_TO_WORK) },
-                        onExercise = { handleRedirectAction(RedirectAction.EXERCISE) },
-                        onStretch = { handleRedirectAction(RedirectAction.STRETCH) },
                         onUnlock = { handleUnlock(blockedPackage) },
                         onExit = { goHomeAndFinish() }
                     )
                 }
             }
         }
-    }
-
-    private fun handleRedirectAction(action: RedirectAction) {
-        incrementRedirectAction(this, action)
-        goHomeAndFinish()
     }
 
     private fun handleUnlock(blockedPackage: String) {
@@ -104,11 +88,6 @@ fun BlockerScreen(
     accumulatedMinutes: Int,
     todaysLimitMinutes: Int,
     blockMessage: String,
-    actions: List<BlockAction>,
-    onRead: () -> Unit,
-    onBackToWork: () -> Unit,
-    onExercise: () -> Unit,
-    onStretch: () -> Unit,
     onUnlock: () -> Unit,
     onExit: () -> Unit
 ) {
@@ -207,63 +186,44 @@ fun BlockerScreen(
     ) {
         Text(
             text = "BLOCKED",
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("App: ${friendlyAppName(blockedPackage)}")
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(blockMessage)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Today's social time: $accumulatedMinutes min")
-        Text("Today's limit: $todaysLimitMinutes min")
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = friendlyAppName(blockedPackage),
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = blockMessage,
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Today: $accumulatedMinutes / $todaysLimitMinutes min")
         Text("Overrides today: $overrideCount")
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        if (BlockAction.READ in actions) {
-            Button(
-                onClick = onRead,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Read")
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = onExit,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Exit")
         }
 
-        if (BlockAction.BACK_TO_WORK in actions) {
-            Button(
-                onClick = onBackToWork,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Get back to work!")
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        if (BlockAction.EXERCISE in actions) {
-            Button(
-                onClick = onExercise,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Exercise")
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        if (BlockAction.STRETCH in actions) {
-            Button(
-                onClick = onStretch,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Stretch")
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-        }
+        Spacer(modifier = Modifier.height(12.dp))
 
         if (isFirstOverrideToday) {
             OutlinedButton(
-                onClick = onUnlock
+                onClick = onUnlock,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Free override")
             }
@@ -274,7 +234,8 @@ fun BlockerScreen(
                     text = ""
                     startTime = null
                     timeRemaining = requiredWaitMs
-                }
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Override")
             }
@@ -305,7 +266,8 @@ fun OverrideEntryScreen(
     ) {
         Text(
             text = "Override",
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -333,8 +295,11 @@ fun OverrideEntryScreen(
         }
 
         Spacer(modifier = Modifier.height(10.dp))
+
         Text("Words: $wordCount / $requiredWords")
+
         Spacer(modifier = Modifier.height(8.dp))
+
         Text("Wait: ${formatRemainingTime(timeRemaining)}")
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -350,7 +315,8 @@ fun OverrideEntryScreen(
 
         OutlinedButton(
             onClick = onUnlock,
-            enabled = canUnlock
+            enabled = canUnlock,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Unlock")
         }
