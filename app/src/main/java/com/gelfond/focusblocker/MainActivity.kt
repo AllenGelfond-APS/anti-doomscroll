@@ -1,6 +1,11 @@
 package com.gelfond.focusblocker
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
+import android.text.TextUtils
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -18,10 +23,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,13 +66,43 @@ fun FocusBlockerDarkTheme(content: @Composable () -> Unit) {
 
 @Composable
 fun MainScreen() {
-    var showDashboard by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    var accessibilityEnabled by remember {
+        mutableStateOf(isFocusAccessibilityServiceEnabled(context))
+    }
+
+    var hasOpenedAccessibilitySettings by remember {
+        mutableStateOf(false)
+    }
+
+    var showDashboard by remember {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            accessibilityEnabled = isFocusAccessibilityServiceEnabled(context)
+            delay(1_000)
+        }
+    }
+
+    LaunchedEffect(accessibilityEnabled) {
+        if (!accessibilityEnabled && !hasOpenedAccessibilitySettings) {
+            hasOpenedAccessibilitySettings = true
+            context.startActivity(
+                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            )
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        if (showDashboard) {
+        if (!accessibilityEnabled) {
+            AccessibilityRequiredScreen()
+        } else if (showDashboard) {
             UsageDashboardScreen(
                 onBack = { showDashboard = false }
             )
@@ -77,6 +112,73 @@ fun MainScreen() {
             )
         }
     }
+}
+
+@Composable
+fun AccessibilityRequiredScreen() {
+    val context = LocalContext.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Accessibility Required",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "FocusBlocker cannot block apps unless its Accessibility Service is turned on."
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Open Accessibility Settings")
+            }
+        }
+    }
+}
+
+fun isFocusAccessibilityServiceEnabled(context: Context): Boolean {
+    val expectedComponentName = ComponentName(
+        context,
+        FocusAccessibilityService::class.java
+    )
+
+    val enabledServices = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    ) ?: return false
+
+    val splitter = TextUtils.SimpleStringSplitter(':')
+    splitter.setString(enabledServices)
+
+    for (enabledService in splitter) {
+        val enabledComponentName =
+            ComponentName.unflattenFromString(enabledService)
+
+        if (enabledComponentName == expectedComponentName) {
+            return true
+        }
+    }
+
+    return false
 }
 
 @Composable
@@ -164,7 +266,7 @@ fun UsageDashboardScreen(
             .padding(
                 start = 12.dp,
                 end = 12.dp,
-                top = 40.dp,     // increase this
+                top = 40.dp,
                 bottom = 10.dp
             ),
         verticalArrangement = Arrangement.spacedBy(8.dp)
